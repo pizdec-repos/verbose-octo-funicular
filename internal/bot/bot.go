@@ -3,8 +3,8 @@ package bot
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/config"
@@ -17,6 +17,7 @@ type Service struct {
 	token  token.Generator
 	logger *zap.Logger
 	repo   Repository
+	wg     sync.WaitGroup
 }
 
 func NewService(cfg *config.Config, tokenGen token.Generator, logger *zap.Logger, repo Repository) *Service {
@@ -33,14 +34,14 @@ func (s *Service) Run(ctx context.Context) error {
 	mux.HandleFunc("/webhook/grafana", s.HandleWebhook)
 
 	srv := &http.Server{
-		Addr:         ":8080",
+		Addr:         ":" + s.config.Port,
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
 	go func() {
-		s.logger.Info("http server starting", zap.String("addr", srv.Addr))
+		s.logger.Info("http server starting", zap.String("port", s.config.Port))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("http server failed", zap.Error(err))
 		}
@@ -49,14 +50,26 @@ func (s *Service) Run(ctx context.Context) error {
 	s.logger.Info("bot worker started", zap.String("bot_id", s.config.BotID))
 
 	<-ctx.Done()
-
-	s.logger.Info("shutting down http server...")
+	s.logger.Info("shutting down application...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("server forced to shutdown: %w", err)
+		s.logger.Error("server shutdown failed", zap.Error(err))
+	}
+
+	waitCh := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(waitCh)
+	}()
+
+	select {
+	case <-waitCh:
+		s.logger.Info("all workers finished")
+	case <-time.After(10 * time.Second):
+		s.logger.Warn("shutdown timed out: some workers might still be running")
 	}
 
 	s.logger.Info("bot stopped gracefully")

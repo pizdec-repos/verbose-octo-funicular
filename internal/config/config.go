@@ -14,6 +14,7 @@ type Config struct {
 	TokenExpiry time.Duration `env:"TOKEN_EXPIRY_MINUTES" env-default:"10m"`
 	LogLevel    string        `env:"LOG_LEVEL" env-default:"info"`
 	Environment string        `env:"ENVIRONMENT" env-default:"development"`
+	Port        string        `env:"PORT" env-default:"8080"`
 }
 
 func Load() (*Config, error) {
