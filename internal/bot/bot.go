@@ -11,13 +11,13 @@ import (
 
 type Service struct {
 	config *config.Config
-	token token.Generator
+	token  token.Generator
 }
 
 func NewService(cfg *config.Config, tokenGen token.Generator) *Service {
 	return &Service{
 		config: cfg,
-		token: tokenGen,
+		token:  tokenGen,
 	}
 }
 

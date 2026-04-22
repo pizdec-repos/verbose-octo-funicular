@@ -26,7 +26,7 @@ type generator struct {
 }
 
 func NewGenerator(cfg *config.Config) Generator {
-	jwtConfig := jwtutil.DefaultConfig(cfg.SecretKey)
+	jwtConfig := jwtutil.DefaultConfig([]byte(cfg.SecretKey))
 	jwtConfig.DefaultExpiry = cfg.TokenExpiry
 
 	return &generator{
@@ -50,7 +50,7 @@ func (g *generator) GenerateWithExpiry(expiry time.Duration) (string, error) {
 
 func (g *generator) Validate(tokenString string) (*Claims, error) {
 	claims := &Claims{}
-	_, err := jwtutil.ValidateWithClaims(tokenString, g.config.SecretKey, claims)
+	_, err := jwtutil.ValidateWithClaims(tokenString, []byte(g.config.SecretKey), claims)
 	if err != nil {
 		return nil, err
 	}

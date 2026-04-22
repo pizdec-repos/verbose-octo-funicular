@@ -37,5 +37,3 @@ func main() {
 		log.Fatalf("Bot failed: %v", err)
 	}
 }
-
-

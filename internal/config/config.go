@@ -2,73 +2,27 @@ package config
 
 import (
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
+	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	BotID       string
-	SecretKey   []byte
-	TokenExpiry time.Duration
-	LogLevel string
+	BotID       string        `env:"BOT_ID" env-required:"true"`
+	SecretKey   string        `env:"SECRET_KEY" env-required:"true"`
+	TokenExpiry time.Duration `env:"TOKEN_EXPIRY_MINUTES" env-default:"10m"`
+	LogLevel    string        `env:"LOG_LEVEL" env-default:"info"`
+	Environment string        `env:"ENVIRONMENT" env-default:"development"`
 }
 
-type Option func(*Config)
-
-func WithTokenExpiry(expiry time.Duration) Option {
-	return func(c *Config) {
-		c.TokenExpiry = expiry
-	}
-}
-
-func Load(opts ...Option) (*Config, error) {
+func Load() (*Config, error) {
 	_ = godotenv.Load()
 
-	cfg := &Config{
-		BotID: getEnv("BOT_ID", ""),
-		SecretKey: []byte(getEnv("SECRET_KEY", "")),
-		TokenExpiry: getDurationEnv("TOKEN_EXPIRY_MINUTES", 10*time.Minute),
-		LogLevel: getEnv("LOG_LEVEL", "info"),
+	var cfg Config
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
-	for _, opt := range opts {
-		opt(cfg)
-	}
-
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
-}
-
-func (c *Config) Validate() error {
-	if c.BotID == "" {
-		return fmt.Errorf("BOT_ID is required")
-	}
-
-	if string(c.SecretKey) == "" {
-		return fmt.Errorf("SECRET_KEY is required")
-	}
-
-	return nil
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getDurationEnv(key string, defaultValue time.Duration) time.Duration {
-	if value := os.Getenv(key); value != "" {
-		if minutes, err := strconv.Atoi(value); err == nil {
-			return time.Duration(minutes) * time.Minute
-		}
-	}
-	return defaultValue
+	return &cfg, nil
 }
