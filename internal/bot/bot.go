@@ -2,7 +2,10 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/config"
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/token"
@@ -26,19 +29,36 @@ func NewService(cfg *config.Config, tokenGen token.Generator, logger *zap.Logger
 }
 
 func (s *Service) Run(ctx context.Context) error {
-	token, err := s.token.Generate()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/webhook/grafana", s.HandleWebhook)
 
-	if err != nil {
-		s.logger.Error("failed to generate token", zap.Error(err))
-		return fmt.Errorf("failed to generate token: %w", err)
+	srv := &http.Server{
+		Addr:         ":8080",
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
-	s.logger.Info("bot started",
-		zap.String("bot_id", s.config.BotID),
-		zap.String("token", token),
-	)
+	go func() {
+		s.logger.Info("http server starting", zap.String("addr", srv.Addr))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("http server failed", zap.Error(err))
+		}
+	}()
+
+	s.logger.Info("bot worker started", zap.String("bot_id", s.config.BotID))
 
 	<-ctx.Done()
-	s.logger.Info("bot stopped")
+
+	s.logger.Info("shutting down http server...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("server forced to shutdown: %w", err)
+	}
+
+	s.logger.Info("bot stopped gracefully")
 	return nil
 }
