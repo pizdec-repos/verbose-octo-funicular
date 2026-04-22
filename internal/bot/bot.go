@@ -13,13 +13,15 @@ type Service struct {
 	config *config.Config
 	token  token.Generator
 	logger *zap.Logger
+	repo   Repository
 }
 
-func NewService(cfg *config.Config, tokenGen token.Generator, logger *zap.Logger) *Service {
+func NewService(cfg *config.Config, tokenGen token.Generator, logger *zap.Logger, repo Repository) *Service {
 	return &Service{
 		config: cfg,
 		token:  tokenGen,
 		logger: logger,
+		repo:   repo,
 	}
 }
 

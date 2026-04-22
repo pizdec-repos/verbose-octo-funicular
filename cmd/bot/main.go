@@ -30,7 +30,10 @@ func main() {
 	}()
 
 	tokenGenerator := token.NewGenerator(cfg)
-	botService := bot.NewService(cfg, tokenGenerator, l)
+
+	alertRepo := bot.NewInMemoryRepo()
+
+	botService := bot.NewService(cfg, tokenGenerator, l, alertRepo)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
