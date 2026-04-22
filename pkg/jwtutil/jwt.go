@@ -47,8 +47,8 @@ func (g *Generator) GenerateStandard(issuer, audience string, expiry time.Durati
 	if expiry == 0 {
 		expiry = g.config.DefaultExpiry
 	}
-
 	now := time.Now()
+
 	claims := &StandardClaims{
 		JTI:     uuid.New().String(),
 		Version: 1,

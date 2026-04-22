@@ -21,8 +21,8 @@ type Claims struct {
 }
 
 type generator struct {
-	config   *config.Config
-	jwtGen   *jwtutil.Generator
+	config *config.Config
+	jwtGen *jwtutil.Generator
 }
 
 func NewGenerator(cfg *config.Config) Generator {
@@ -40,19 +40,16 @@ func (g *generator) Generate() (string, error) {
 }
 
 func (g *generator) GenerateWithExpiry(expiry time.Duration) (string, error) {
-	token, stdClaims, err := g.jwtGen.GenerateStandard(g.config.BotID, "", expiry)
+	token, _, err := g.jwtGen.GenerateStandard(g.config.BotID, "", expiry)
 	if err != nil {
 		return "", err
 	}
-
-	_ = stdClaims
 
 	return token, nil
 }
 
 func (g *generator) Validate(tokenString string) (*Claims, error) {
 	claims := &Claims{}
-
 	_, err := jwtutil.ValidateWithClaims(tokenString, g.config.SecretKey, claims)
 	if err != nil {
 		return nil, err
