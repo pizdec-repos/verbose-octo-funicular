@@ -10,6 +10,8 @@ import (
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/bot"
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/config"
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/token"
+	"github.com/pizdec-repos/verbose-octo-funicular/pkg/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -18,8 +20,17 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	isDev := cfg.Environment == "development"
+	l, err := logger.New(cfg.LogLevel, isDev)
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer func() {
+		_ = l.Sync()
+	}()
+
 	tokenGenerator := token.NewGenerator(cfg)
-	botService := bot.NewService(cfg, tokenGenerator)
+	botService := bot.NewService(cfg, tokenGenerator, l)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -28,12 +39,13 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		<-sigChan
-		log.Println("Shutting down gracefully...")
+		sig := <-sigChan
+		l.Info("received shutdown signal", zap.String("signal", sig.String()))
 		cancel()
 	}()
 
+	l.Info("starting application")
 	if err := botService.Run(ctx); err != nil {
-		log.Fatalf("Bot failed: %v", err)
+		l.Fatal("application failed", zap.Error(err))
 	}
 }
