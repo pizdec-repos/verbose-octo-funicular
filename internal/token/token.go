@@ -36,15 +36,21 @@ func NewGenerator(cfg *config.Config) Generator {
 }
 
 func (g *generator) Generate() (string, error) {
-	return g.GenerateWithExpiry(g.config.TokenExpiry)
+	return g.GenerateWithExpiry(0)
 }
 
 func (g *generator) GenerateWithExpiry(expiry time.Duration) (string, error) {
-	token, _, err := g.jwtGen.GenerateStandard(g.config.BotID, "", expiry)
+	if expiry == 0 {
+		expiry = g.config.TokenExpiry
+	}
+	if expiry == 0 {
+		expiry = 10 * time.Minute
+	}
+
+	token, _, err := g.jwtGen.GenerateStandard(g.config.BotID, g.config.ExpressAudience, expiry)
 	if err != nil {
 		return "", err
 	}
-
 	return token, nil
 }
 
@@ -58,6 +64,5 @@ func (g *generator) Validate(tokenString string) (*Claims, error) {
 	if claims.BotID != g.config.BotID {
 		return nil, fmt.Errorf("bot_id mismatch: expected %s, got %s", g.config.BotID, claims.BotID)
 	}
-
 	return claims, nil
 }

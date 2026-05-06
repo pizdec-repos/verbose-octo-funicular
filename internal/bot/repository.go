@@ -1,9 +1,6 @@
 package bot
 
-import (
-	"context"
-	"time"
-)
+import "time"
 
 type AlertState struct {
 	Fingerprint string
@@ -12,5 +9,9 @@ type AlertState struct {
 }
 
 type Repository interface {
-	ShouldNotify(ctx context.Context, fingerprint string, status string) bool
+	ShouldNotify(fingerprint string, status string) bool
+	MarkFailed(fingerprint string)
+	Cleanup()
+	Len() int
+	Stats() map[string]int
 }

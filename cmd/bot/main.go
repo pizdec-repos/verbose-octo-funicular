@@ -10,6 +10,7 @@ import (
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/bot"
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/config"
 	"github.com/pizdec-repos/verbose-octo-funicular/internal/token"
+	"github.com/pizdec-repos/verbose-octo-funicular/pkg/express"
 	"github.com/pizdec-repos/verbose-octo-funicular/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -25,15 +26,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	defer func() {
-		_ = l.Sync()
-	}()
+	defer func() { _ = l.Sync() }()
+
+	l.Info("config loaded",
+		zap.String("port", cfg.Port),
+		zap.String("express_host", cfg.ExpressHost),
+		zap.String("express_chat_id", cfg.ExpressChatID),
+		zap.Duration("token_expiry", cfg.TokenExpiry),
+		zap.String("environment", cfg.Environment),
+	)
 
 	tokenGenerator := token.NewGenerator(cfg)
+	tokenGenerator = token.NewCachedGenerator(tokenGenerator)
 
 	alertRepo := bot.NewInMemoryRepo()
-
-	botService := bot.NewService(cfg, tokenGenerator, l, alertRepo)
+	expressClient := express.NewClient(cfg.ExpressHost, cfg.ExpressChatID, tokenGenerator, l)
+	botService := bot.NewService(cfg, tokenGenerator, l, alertRepo, expressClient)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

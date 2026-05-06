@@ -48,17 +48,18 @@ func (g *Generator) GenerateStandard(issuer, audience string, expiry time.Durati
 		expiry = g.config.DefaultExpiry
 	}
 	now := time.Now()
+	jti := uuid.New().String()
 
 	claims := &StandardClaims{
-		JTI:     uuid.New().String(),
-		Version: 1,
+		JTI:     jti,
+		Version: 2,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    issuer,
 			Audience:  jwt.ClaimStrings{audience},
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 			NotBefore: jwt.NewNumericDate(now),
 			IssuedAt:  jwt.NewNumericDate(now),
-			ID:        uuid.New().String(),
+			ID:        jti,
 		},
 	}
 
@@ -105,11 +106,13 @@ func ValidateWithClaims[T jwt.Claims](tokenString string, secretKey []byte, clai
 	})
 
 	if err != nil {
-		return claims, fmt.Errorf("failed to validate token: %w", err)
+		var zero T
+		return zero, fmt.Errorf("failed to validate token: %w", err)
 	}
 
 	if !token.Valid {
-		return claims, fmt.Errorf("token is invalid")
+		var zero T
+		return zero, fmt.Errorf("token is invalid")
 	}
 
 	return claims, nil

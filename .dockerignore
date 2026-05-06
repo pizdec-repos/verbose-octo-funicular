@@ -1,0 +1,14 @@
+.git/
+
+*.exe
+.czrc
+.dockerignore
+.editorconfig
+.env
+.env.example
+.gitattributes
+.gitignore
+.golangci.yml
+Dockerfile
+justfile
+lefthook.yml

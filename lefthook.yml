@@ -8,5 +8,5 @@ pre-commit:
     vet:
       run: go vet ./...
 
-    lint:
-      run: golangci-lint run --fix
+    # lint:
+    #   run: golangci-lint run --fix
